@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-[#FAF9F6] text-[#2B2D42]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>東京冬日旅程 2026 🇯🇵 TOKYO TOOLKIT</title>
+
+    <!-- PWA Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="東京冬旅">
+    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=180&h=180&fit=crop">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase App & Realtime Database CDN -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        porcelain: '#FAF9F6',
+                        paper: '#FFFFFF',
+                        navy: '#1B2A4A',
+                        'navy-light': '#E8ECF2',
+                        terracotta: '#C85A32',
+                        'terracotta-light': '#FCEEE8',
+                        charcoal: '#2B2D42',
+                        borderline: '#E5E2DC'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeInSmooth 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .click-anim:active { transform: scale(0.97); transition: transform 0.1s ease; }
+        @keyframes fadeInSmooth {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-card-pop { animation: fadeInSmooth 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-porcelain text-charcoal selection:bg-terracotta selection:text-white">
+
+    <!-- 🔒 日系極簡風解鎖全螢幕遮罩 -->
+    <div id="lockScreenOverlay" class="fixed inset-0 z-50 bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-charcoal transition-all duration-500">
+        <div class="max-w-sm w-full bg-paper p-8 rounded-[2rem] border border-borderline shadow-xl text-center space-y-6 animate-card-pop">
+            <div class="w-16 h-16 rounded-2xl bg-terracotta-light text-terracotta flex items-center justify-center text-2xl mx-auto shadow-sm">
+                <i class="fa-solid fa-compass"></i>
+            </div>
+            <div>
+                <span class="text-[10px] uppercase tracking-widest font-serif text-terracotta font-bold">JAPAN TRAVEL TOOLKIT</span>
+                <h2 class="font-serif text-2xl font-bold text-navy tracking-wide mt-1">東京冬日旅 2026</h2>
+                <p class="text-xs text-stone-500 mt-2 leading-relaxed">請輸入同步解鎖密碼<br>以存取專屬行程、航班住宿與記帳本</p>
+            </div>
+            <div class="space-y-3">
+                <input type="password" id="lock-passcode-input" placeholder="請輸入解鎖密碼" class="w-full px-4 py-3 bg-porcelain rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 text-center font-mono text-sm focus:outline-none focus:ring-2 focus:ring-terracotta tracking-widest transition">
+                <button onclick="unlockAndJoinSyncRoom()" class="click-anim w-full py-3.5 bg-navy text-white font-bold text-xs tracking-wider rounded-xl shadow-md transition active:scale-95">
+                    解鎖並進入旅程 🔓
+                </button>
+            </div>
+            <p id="lock-error-msg" class="text-rose-600 text-xs font-bold hidden">❌ 密碼錯誤，請重新輸入！</p>
+        </div>
+    </div>
+
+    <!-- HEADER BAR -->
+    <header class="sticky top-0 z-30 bg-porcelain/95 backdrop-blur-md px-4 pt-4 pb-3 border-b border-borderline">
+        <div class="flex items-center justify-between">
+            <div>
+                <span class="text-xs tracking-widest font-serif text-terracotta uppercase font-bold">JAPAN TRAVEL TOOLKIT</span>
+                <h1 class="font-serif text-2xl font-bold text-navy tracking-wide flex items-center gap-2">
+                    東京冬日旅 🇯🇵 <span class="text-xs px-2.5 py-0.5 rounded-full bg-navy/10 text-navy font-sans font-bold">2026</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openModal('pwaInstallModal')" class="click-anim w-9 h-9 rounded-full bg-terracotta-light text-terracotta flex items-center justify-center text-sm shadow-xs active:scale-95 transition" title="加到主畫面">
+                    <svg class="w-4 h-4 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                </button>
+                <button onclick="switchTab('info')" class="click-anim w-9 h-9 rounded-full bg-navy-light flex items-center justify-center text-navy text-sm shadow-xs active:scale-95 transition">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sync Bar Status -->
+        <div class="mt-2.5 bg-paper p-2 rounded-2xl border border-borderline flex items-center justify-between gap-2 text-xs shadow-xs">
+            <div class="flex items-center gap-1.5 flex-1 overflow-hidden">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-stone-700 font-bold truncate">與寶貝雲端即時雙向同步中 ⚡</span>
+            </div>
+        </div>
+
+        <!-- Horizontal Date Selector -->
+        <div id="date-selector-wrapper" class="mt-3 overflow-x-auto no-scrollbar pb-1">
+            <div class="flex gap-2 min-w-max">
+                <button onclick="selectDate(1)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-navy text-white shadow-sm transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider opacity-80 font-bold">12/18</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 1</span>
+                </button>
+                <button onclick="selectDate(2)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/19</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 2</span>
+                </button>
+                <button onclick="selectDate(3)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/20</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 3</span>
+                </button>
+                <button onclick="selectDate(4)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/21</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 4</span>
+                </button>
+                <button onclick="selectDate(5)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/22</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 5</span>
+                </button>
+                <button onclick="selectDate(6)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/23</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 6</span>
+                </button>
+                <button onclick="selectDate(7)" class="click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95">
+                    <span class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">12/24</span>
+                    <span class="text-sm font-bold mt-0.5">DAY 7</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VIEWPORT CONTAINER -->
+    <main class="flex-1 overflow-y-auto pb-24 px-4 pt-4 max-w-lg mx-auto w-full">
+
+        <!-- TAB 1: ITINERARY & MAP -->
+        <div id="tab-itinerary" class="tab-content space-y-4">
+            
+            <!-- Day Header Banner Card -->
+            <div id="day-banner-card" class="relative rounded-3xl overflow-hidden shadow-md border border-borderline bg-paper animate-card-pop">
+                <div class="h-44 w-full relative overflow-hidden bg-stone-200">
+                    <img id="current-day-bg-img" src="" alt="Tokyo spot" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                    <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-navy shadow-sm flex items-center gap-1.5">
+                        <span id="current-day-emoji">✈️</span> <span id="current-day-tag">DAY 1 • 12/18 FRI</span>
+                    </div>
+                    <div class="absolute bottom-3 left-4 right-4 text-white">
+                        <h2 id="current-location-title" class="text-xl font-serif font-bold tracking-wide leading-tight">抵達東京 & 新宿與池袋燒肉夜</h2>
+                        <p id="current-hotel-sub" class="text-xs text-stone-200 mt-1 opacity-90 truncate">入住：Hotel Amanek Shinjuku Kabukicho</p>
+                    </div>
+                </div>
+
+                <!-- Live Weather & Hotel Quick Bar -->
+                <div class="p-4 bg-paper flex items-center justify-between text-xs border-b border-borderline gap-2">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold flex-shrink-0">
+                            <i class="fa-solid fa-cloud-sun"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-stone-800 truncate" id="weather-city-name">東京即時天氣</div>
+                            <div class="text-stone-400 text-[11px] truncate" id="weather-api-status">載入中...</div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <a id="hotel-map-link" href="#" target="_blank" class="click-anim inline-flex items-center gap-1 font-bold text-navy bg-navy-light px-3 py-1.5 rounded-xl transition active:scale-95">
+                            <i class="fa-solid fa-hotel text-terracotta"></i> <span id="hotel-name">飯店導航</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Google Maps Spots Tags Bar -->
+                <div class="p-3 bg-porcelain/70 flex flex-wrap gap-1.5 items-center">
+                    <span class="text-[11px] font-bold text-stone-500 mr-1"><i class="fa-solid fa-location-dot text-terracotta"></i> 景點標籤:</span>
+                    <div id="day-spots-list-tags" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Google Maps Embed Box -->
+            <div class="bg-paper rounded-3xl p-3 border border-borderline shadow-sm space-y-2 animate-card-pop">
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-bold text-navy tracking-wider uppercase"><i class="fa-solid fa-map-location-dot text-terracotta"></i> 🗺️ Google Maps 當日預覽地圖</span>
+                    <span class="text-[11px] text-stone-400 font-mono" id="map-spots-count">4 個停留點</span>
+                </div>
+                <div class="w-full h-56 rounded-2xl overflow-hidden border border-stone-200 bg-stone-100 relative">
+                    <iframe id="google-map-iframe" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src=""></iframe>
+                </div>
+            </div>
+
+            <!-- Itinerary Timeline Items -->
+            <div id="day-items-container" class="space-y-3"></div>
+        </div>
+
+        <!-- TAB 2: SHOPPING & WISHLIST -->
+        <div id="tab-shopping" class="tab-content space-y-4">
+            <div class="bg-paper p-5 rounded-3xl border border-borderline shadow-sm space-y-4 animate-card-pop">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-serif text-lg font-bold text-navy">🛍️ 東京購物與代購清單</h3>
+                        <p class="text-xs text-stone-500 mt-0.5">與寶貝雲端即時雙向同步</p>
+                    </div>
+                    <span class="text-xs bg-terracotta-light text-terracotta font-bold px-2.5 py-1 rounded-xl">Realtime</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="new-wish-input" placeholder="輸入想買的藥妝、衣服、伴手禮..." class="flex-1 px-3.5 py-2.5 bg-porcelain rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-navy">
+                    <button onclick="addWishlistItem()" class="click-anim bg-navy text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs active:scale-95 transition flex-shrink-0">
+                        新增
+                    </button>
+                </div>
+
+                <div id="shopping-checklist-main" class="space-y-2.5 pt-2"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3: BUDGET & LEDGER -->
+        <div id="tab-budget" class="tab-content space-y-4">
+            <div class="bg-paper p-5 rounded-3xl border border-borderline shadow-sm space-y-4 animate-card-pop">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-serif text-lg font-bold text-navy">💰 雙人旅遊記帳本</h3>
+                        <p class="text-xs text-stone-500 mt-0.5" id="live-rate-indicator">即時匯率: 1 JPY ≈ 0.215 TWD</p>
+                    </div>
+                    <button onclick="openModal('addExpenseModal')" class="click-anim bg-terracotta text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs active:scale-95 transition flex-shrink-0">
+                        + 記一筆
+                    </button>
+                </div>
+
+                <div class="flex bg-porcelain p-1 rounded-2xl border border-stone-200 text-xs">
+                    <button onclick="switchBudgetSubTab('pretrip')" id="btn-budget-pretrip" class="click-anim flex-1 py-2.5 rounded-xl font-bold transition bg-navy text-white shadow-xs">
+                        事前預訂 (TWD)
+                    </button>
+                    <button onclick="switchBudgetSubTab('ontrip')" id="btn-budget-ontrip" class="click-anim flex-1 py-2.5 rounded-xl font-bold text-stone-600 hover:text-stone-900 transition">
+                        旅途花費 (JPY)
+                    </button>
+                </div>
+
+                <div class="bg-navy-light/60 p-4 rounded-2xl border border-navy/10 flex items-center justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[11px] font-bold text-stone-500 uppercase tracking-wider truncate" id="budget-section-title">事前預訂總額 (台幣)</div>
+                        <div class="text-2xl font-serif font-bold text-navy mt-0.5 truncate" id="budget-total-twd">NT$ 0</div>
+                    </div>
+                    <div class="text-right text-xs space-y-0.5 flex-shrink-0">
+                        <div class="text-stone-600">香菜已付: <span class="font-bold text-stone-900" id="payer-kana-total">NT$ 0</span></div>
+                        <div class="text-stone-600">Lawson已付: <span class="font-bold text-stone-900" id="payer-lawson-total">NT$ 0</span></div>
+                    </div>
+                </div>
+
+                <div id="expense-items-list" class="space-y-2.5 pt-1"></div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INFO & WEATHER -->
+        <div id="tab-info" class="tab-content space-y-4">
+            <div class="bg-paper p-5 rounded-3xl border border-borderline shadow-sm space-y-4 animate-card-pop">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-serif text-lg font-bold text-navy truncate">🌤️ 東京氣象、航班與住宿資訊</h3>
+                    <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg flex-shrink-0" id="info-weather-status">Open-Meteo API</span>
+                </div>
+
+                <div class="bg-porcelain p-4 rounded-2xl border border-stone-200 space-y-2.5">
+                    <div class="text-xs font-bold text-navy uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-plane text-terracotta"></i> 航班資訊 (長榮航空 EVA Air)
+                    </div>
+                    <div class="text-xs text-stone-700 space-y-2">
+                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-stone-200 transition hover:border-navy/30 gap-2">
+                            <div class="min-w-0 flex-1">
+                                <span class="font-bold text-navy block">去程 (12/18): BR198</span>
+                                <span class="text-stone-500 block truncate">08:50 桃園機場 ➔ 12:55 成田機場 (NRT T1)</span>
+                            </div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Taoyuan+International+Airport" target="_blank" class="click-anim text-blue-600 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded-lg active:scale-95 transition flex-shrink-0">
+                                📍 導航
+                            </a>
+                        </div>
+                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-stone-200 transition hover:border-navy/30 gap-2">
+                            <div class="min-w-0 flex-1">
+                                <span class="font-bold text-navy block">回程 (12/24): BR183</span>
+                                <span class="text-stone-500 block truncate">13:00 成田機場 (NRT T1) ➔ 16:05 桃園機場</span>
+                            </div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Narita+Airport+Terminal+1" target="_blank" class="click-anim text-blue-600 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded-lg active:scale-95 transition flex-shrink-0">
+                                📍 導航
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-porcelain p-4 rounded-2xl border border-stone-200 space-y-2.5">
+                    <div class="text-xs font-bold text-navy uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-hotel text-terracotta"></i> 住宿飯店資訊
+                    </div>
+                    <div class="text-xs text-stone-700 space-y-2">
+                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-stone-200 transition hover:border-navy/30 gap-2">
+                            <div class="min-w-0 flex-1">
+                                <span class="font-bold text-navy block">12/18 - 12/21 (3晚)</span>
+                                <span class="text-stone-800 font-medium block truncate">Hotel Amanek Shinjuku Kabukicho</span>
+                            </div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Hotel+Amanek+Shinjuku+Kabukicho" target="_blank" class="click-anim text-blue-600 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded-lg active:scale-95 transition flex-shrink-0">
+                                📍 導航
+                            </a>
+                        </div>
+                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-stone-200 transition hover:border-navy/30 gap-2">
+                            <div class="min-w-0 flex-1">
+                                <span class="font-bold text-navy block">12/21 - 12/24 (3晚)</span>
+                                <span class="text-stone-800 font-medium block truncate">三井花園飯店上野 (Mitsui Garden Hotel Ueno)</span>
+                            </div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Mitsui+Garden+Hotel+Ueno" target="_blank" class="click-anim text-blue-600 font-bold text-xs bg-blue-50 px-2.5 py-1 rounded-lg active:scale-95 transition flex-shrink-0">
+                                📍 導航
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center pt-2">
+                    <div class="bg-porcelain p-3 rounded-2xl border border-stone-200 animate-card-pop">
+                        <div class="text-[11px] text-stone-400 font-bold">目前氣溫</div>
+                        <div class="text-lg font-bold text-navy mt-1" id="info-weather-temp">--°C</div>
+                    </div>
+                    <div class="bg-porcelain p-3 rounded-2xl border border-stone-200 animate-card-pop">
+                        <div class="text-[11px] text-stone-400 font-bold">相對濕度</div>
+                        <div class="text-lg font-bold text-navy mt-1" id="info-weather-humidity">--%</div>
+                    </div>
+                    <div class="bg-porcelain p-3 rounded-2xl border border-stone-200 animate-card-pop">
+                        <div class="text-[11px] text-stone-400 font-bold">風速</div>
+                        <div class="text-lg font-bold text-navy mt-1" id="info-weather-wind">-- km/h</div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-stone-500 uppercase tracking-wider">未來 24 小時氣溫預報</div>
+                    <div id="hourly-weather-container" class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1"></div>
+                </div>
+
+                <div class="border-t border-stone-100 pt-4 space-y-2">
+                    <div class="text-xs font-bold text-stone-500 uppercase tracking-wider">緊急聯絡與實用電話</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <a href="tel:110" class="click-anim p-3 bg-porcelain rounded-xl border border-stone-200 flex items-center justify-between font-bold text-stone-800 transition active:scale-95">
+                            <span>🚨 警察局</span> <span class="text-terracotta">110</span>
+                        </a>
+                        <a href="tel:119" class="click-anim p-3 bg-porcelain rounded-xl border border-stone-200 flex items-center justify-between font-bold text-stone-800 transition active:scale-95">
+                            <span>🚑 救護/火災</span> <span class="text-terracotta">119</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 bg-paper/95 backdrop-blur-md border-t border-borderline px-4 py-2 max-w-lg mx-auto">
+        <div class="flex justify-around items-center">
+            <button onclick="switchTab('itinerary')" id="nav-itinerary" class="click-anim nav-btn flex flex-col items-center py-1 px-3 text-navy transition">
+                <i class="fa-solid fa-map-marked-alt text-lg"></i>
+                <span class="text-[11px] font-bold mt-0.5">行程</span>
+            </button>
+            <button onclick="switchTab('shopping')" id="nav-shopping" class="click-anim nav-btn flex flex-col items-center py-1 px-3 text-stone-400 transition">
+                <i class="fa-solid fa-bag-shopping text-lg"></i>
+                <span class="text-[11px] font-bold mt-0.5">購物</span>
+            </button>
+            <button onclick="switchTab('budget')" id="nav-budget" class="click-anim nav-btn flex flex-col items-center py-1 px-3 text-stone-400 transition">
+                <i class="fa-solid fa-wallet text-lg"></i>
+                <span class="text-[11px] font-bold mt-0.5">帳目</span>
+            </button>
+            <button onclick="switchTab('info')" id="nav-info" class="click-anim nav-btn flex flex-col items-center py-1 px-3 text-stone-400 transition">
+                <i class="fa-solid fa-circle-info text-lg"></i>
+                <span class="text-[11px] font-bold mt-0.5">資訊</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODAL: ITEM DETAIL -->
+    <div id="itemDetailModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-paper w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl animate-card-pop">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                <span id="modal-category" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-navy-light text-navy">CATEGORY</span>
+                <button onclick="closeModal('itemDetailModal')" class="click-anim w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div>
+                <h3 id="modal-title" class="font-serif text-xl font-bold text-navy">標題名稱</h3>
+                <p id="modal-subtitle" class="text-xs text-stone-500 mt-1">子標題說明</p>
+            </div>
+            <div id="modal-code-box" class="bg-porcelain p-3.5 rounded-2xl border border-stone-200 text-xs space-y-1">
+                <div class="font-bold text-navy">🎫 預約編號 / 備註：</div>
+                <div class="font-mono font-bold text-terracotta text-sm" id="modal-code-val">--</div>
+                <div class="text-stone-500" id="modal-gps-val">--</div>
+            </div>
+            <div class="space-y-2">
+                <div class="text-xs font-bold text-stone-400 uppercase tracking-wider">詳細說明與交通指南</div>
+                <div id="modal-story-text" class="text-sm text-stone-700 leading-relaxed bg-navy-light/30 p-4 rounded-2xl"></div>
+            </div>
+            <div id="modal-speak-pills" class="space-y-2 pt-2">
+                <div class="text-xs font-bold text-stone-400 uppercase tracking-wider">💬 常用日語指字卡</div>
+                <div id="pills-container" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="pt-3">
+                <a id="modal-gmap-btn" href="#" target="_blank" class="click-anim w-full py-3.5 rounded-2xl bg-navy text-white text-center font-bold text-sm shadow-md block transition active:scale-95">
+                    📍 開啟 Google Maps 導航
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: POINT & SPEAK CARD (Google TTS 語音) -->
+    <div id="speakCardModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-paper w-full max-w-sm rounded-3xl p-6 text-center space-y-4 shadow-2xl relative animate-card-pop">
+            <button onclick="closeModal('speakCardModal')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="pt-2">
+                <span class="text-xs font-bold text-terracotta bg-terracotta-light px-3 py-1 rounded-full uppercase">POINT & SPEAK 🗣️</span>
+            </div>
+            <div>
+                <div id="speak-main-text" class="text-3xl font-bold font-serif text-navy tracking-wide">成田空港</div>
+                <div id="speak-cn-text" class="text-base font-bold text-stone-600 mt-2">成田機場</div>
+                <div id="speak-romaji-text" class="text-xs text-stone-400 font-mono mt-1">Narita Kuukou</div>
+            </div>
+            <div class="pt-2 space-y-2">
+                <button onclick="speakText()" class="click-anim w-full py-3.5 rounded-2xl bg-terracotta text-white font-bold text-sm shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-volume-high"></i> 播放 Google 日語發音 🔊
+                </button>
+                <p class="text-[11px] text-stone-400">請將手機螢幕秀給店家或店員看即可</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD EXPENSE -->
+    <div id="addExpenseModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-paper w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl animate-card-pop">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                <h3 class="font-serif text-lg font-bold text-navy">新增記帳項目</h3>
+                <button onclick="closeModal('addExpenseModal')" class="click-anim w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1">項目名稱</label>
+                    <input type="text" id="exp-name" placeholder="例如：一蘭拉麵、計程車..." class="w-full px-3.5 py-2.5 bg-porcelain rounded-xl border border-stone-200 text-sm focus:outline-none focus:border-navy">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1" id="exp-amount-label">金額</label>
+                    <input type="number" id="exp-jpy" placeholder="請輸入數字..." class="w-full px-3.5 py-2.5 bg-porcelain rounded-xl border border-stone-200 text-sm font-mono focus:outline-none focus:border-navy">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1">付款/代墊人</label>
+                    <select id="exp-payer" class="w-full px-3.5 py-2.5 bg-porcelain rounded-xl border border-stone-200 text-sm font-bold text-stone-800 focus:outline-none">
+                        <option value="香菜">香菜</option>
+                        <option value="Lawson">Lawson</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="addExpense()" class="click-anim w-full py-3.5 rounded-2xl bg-navy text-white font-bold text-sm shadow-md mt-2">
+                確認新增並同步
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: PWA INSTALL GUIDE -->
+    <div id="pwaInstallModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-paper w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl relative animate-card-pop">
+            <button onclick="closeModal('pwaInstallModal')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center">
+                <span class="text-xs font-bold text-terracotta bg-terracotta-light px-3 py-1 rounded-full uppercase">PWA 桌面捷徑</span>
+                <h3 class="font-serif text-xl font-bold text-navy mt-2">如何將 App 放到手機桌面？</h3>
+            </div>
+            <div class="space-y-3 text-xs text-stone-600 bg-porcelain p-4 rounded-2xl border border-stone-200">
+                <div class="flex items-start gap-2.5">
+                    <span class="w-5 h-5 rounded-full bg-navy text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">1</span>
+                    <div><b>iPhone (Safari 瀏覽器)：</b><br>點擊下方工具列的「分享」按鈕，然後選擇「<b>加入主畫面</b>」。</div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <span class="w-5 h-5 rounded-full bg-navy text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">2</span>
+                    <div><b>Android (Chrome 瀏覽器)：</b><br>點擊右上角選單，然後選擇「<b>加到主畫面</b>」或「<b>安裝應用程式</b>」。</div>
+                </div>
+            </div>
+            <button onclick="closeModal('pwaInstallModal')" class="click-anim w-full py-3 rounded-2xl bg-navy text-white font-bold text-xs shadow-md">
+                了解！立即使用
+            </button>
+        </div>
+    </div>
+
+    <!-- 全域 JavaScript 核心與 Firebase 雙向同步邏輯 -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBGyoU43cl9LICYOuIQRBuvFyO4bNDN48",
+            authDomain: "tokyotrip-7aac8.firebaseapp.com",
+            projectId: "tokyotrip-7aac8",
+            storageBucket: "tokyotrip-7aac8.firebasestorage.app",
+            messagingSenderId: "816275063603",
+            appId: "1:816275063603:web:bed054120d21b04bc0f446",
+            measurementId: "G-J23B7GXN3W"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // 預設資料
+        const defaultWishlist = [
+            "雙面時鐘 🕰️", 
+            "Casio / Seiko / Citizen 手錶 ⌚", 
+            "亞瑟士鞋子 (Asics) 👟",
+            "Niko and.... / Beams 衣服 👕", 
+            "工具店 🔧", 
+            "CEZANNE 毛穴輕羽柔焦蜜粉 02盤！ 💄",
+            "MUJI 刷具清潔噴霧、化妝棉 🧴", 
+            "超大隻卡比 (Kirby) 🧸", 
+            "3 coins 真空袋 🎒",
+            "陳韻芝 茅乃舍湯包（昆布、野菜） 🍲"
+        ];
+
+        const defaultPreTrip = [
+            { id: 'pre-1', name: "機票 (BR198/BR183) • 香菜", twd: 11557, payer: "香菜", note: "單人來回長榮機票" },
+            { id: 'pre-2', name: "機票 (BR198/BR183) • Lawson", twd: 11557, payer: "Lawson", note: "單人來回長榮機票" },
+            { id: 'pre-3', name: "新宿飯店 12/18-12/21 (全額 $15,565)", twd: 15565, payer: "Lawson", note: "Lawson 先付 ($7,782/人)" },
+            { id: 'pre-4', name: "上野飯店 12/21-12/24 (全額 $17,454)", twd: 17454, payer: "香菜", note: "香菜已結清 ($8,727/人)" },
+            { id: 'pre-5', name: "優里橫濱演唱會門票 • 香菜", twd: 1995, payer: "香菜", note: "演唱會門票" },
+            { id: 'pre-6', name: "優里橫濱演唱會門票 • Lawson", twd: 1995, payer: "Lawson", note: "演唱會門票" }
+        ];
+
+        const defaultOnTrip = [
+            { id: 1, name: "焼肉あぶる (前男友燒肉)", jpy: 16000, payer: "香菜", status: "已付" },
+            { id: 2, name: "山笑ふ 壽喜燒 (銀座)", jpy: 12000, payer: "香菜", status: "已付" },
+            { id: 3, name: "牛たんの檸檬 (秋葉原)", jpy: 9800, payer: "Lawson", status: "未付" }
+        ];
+
+        let userWishlist = [];
+        let preTripExpenses = [];
+        let onTripExpenses = [];
+
+        let liveJpyToTwdRate = 0.215;
+        let currentBudgetSubTab = 'pretrip';
+
+        // 初始化檢查：只在雲端完全沒有紀錄（甚至連 null 都没有）時才寫入預設清單
+        database.ref('tokyo_trip_v5/wishlist').once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                database.ref('tokyo_trip_v5/wishlist').set(defaultWishlist);
+            }
+        });
+
+        database.ref('tokyo_trip_v5/pretrip').once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                database.ref('tokyo_trip_v5/pretrip').set(defaultPreTrip);
+            }
+        });
+
+        database.ref('tokyo_trip_v5/ontrip').once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                database.ref('tokyo_trip_v5/ontrip').set(defaultOnTrip);
+            }
+        });
+
+        // 建立即時雙向監聽（允許接收空陣列 []，達成真正可刪除、可新增、跨裝置同步）
+        database.ref('tokyo_trip_v5/wishlist').on('value', (snapshot) => {
+            const data = snapshot.val();
+            userWishlist = Array.isArray(data) ? data : [];
+            renderWishlist();
+        });
+
+        database.ref('tokyo_trip_v5/pretrip').on('value', (snapshot) => {
+            const data = snapshot.val();
+            preTripExpenses = Array.isArray(data) ? data : [];
+            renderBudget();
+        });
+
+        database.ref('tokyo_trip_v5/ontrip').on('value', (snapshot) => {
+            const data = snapshot.val();
+            onTripExpenses = Array.isArray(data) ? data : [];
+            renderBudget();
+        });
+
+        // 全域操作函式（UI 立即反應 + 非同步寫入 Firebase）
+        window.addWishlistItem = function() {
+            const input = document.getElementById('new-wish-input');
+            const val = input ? input.value.trim() : '';
+            if (!val) { alert("請輸入想買的項目名稱"); return; }
+            
+            userWishlist.push(val);
+            if (input) input.value = '';
+            renderWishlist();
+
+            database.ref('tokyo_trip_v5/wishlist').set(userWishlist).catch(err => {
+                console.error("Firebase sync error:", err);
+            });
+        };
+
+        window.deleteWishlistItem = function(idx) {
+            userWishlist.splice(idx, 1);
+            renderWishlist();
+            database.ref('tokyo_trip_v5/wishlist').set(userWishlist);
+        };
+
+        window.deletePreTripExpense = function(idx) {
+            preTripExpenses.splice(idx, 1);
+            renderBudget();
+            database.ref('tokyo_trip_v5/pretrip').set(preTripExpenses);
+        };
+
+        window.deleteExpense = function(idx) {
+            onTripExpenses.splice(idx, 1);
+            renderBudget();
+            database.ref('tokyo_trip_v5/ontrip').set(onTripExpenses);
+        };
+
+        window.addExpense = function() {
+            const nameEl = document.getElementById('exp-name');
+            const jpyEl = document.getElementById('exp-jpy');
+            const payerEl = document.getElementById('exp-payer');
+
+            const name = nameEl ? nameEl.value.trim() : '';
+            const amount = jpyEl ? parseInt(jpyEl.value) : NaN;
+            const payer = payerEl ? payerEl.value : '香菜';
+
+            if (!name || isNaN(amount)) {
+                alert("請完整輸入項目名稱與金額");
+                return;
+            }
+
+            if (currentBudgetSubTab === 'pretrip') {
+                preTripExpenses.push({ id: 'pre-' + Date.now(), name, twd: amount, payer, note: '自訂預訂開銷' });
+                renderBudget();
+                database.ref('tokyo_trip_v5/pretrip').set(preTripExpenses);
+            } else {
+                onTripExpenses.push({ id: Date.now(), name, jpy: amount, payer, status: '已付' });
+                renderBudget();
+                database.ref('tokyo_trip_v5/ontrip').set(onTripExpenses);
+            }
+
+            if (nameEl) nameEl.value = '';
+            if (jpyEl) jpyEl.value = '';
+            closeModal('addExpenseModal');
+        };
+
+        // 畫面渲染函式
+        window.renderWishlist = function() {
+            const container = document.getElementById('shopping-checklist-main');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (userWishlist.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-stone-400 text-xs">目前購物清單是空的，趕快新增想要的物品吧！✨</div>`;
+                return;
+            }
+
+            userWishlist.forEach((w, idx) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3.5 bg-porcelain rounded-xl border border-stone-200 transition animate-card-pop gap-2';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <input type="checkbox" id="wish-${idx}" class="click-anim rounded text-navy focus:ring-0 w-5 h-5 cursor-pointer flex-shrink-0">
+                        <label for="wish-${idx}" class="text-stone-800 font-bold text-sm cursor-pointer select-none truncate">${w}</label>
+                    </div>
+                    <button onclick="deleteWishlistItem(${idx})" class="click-anim text-stone-300 hover:text-rose-500 p-1 transition active:scale-90 flex-shrink-0"><i class="fa-regular fa-trash-can text-sm"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        };
+
+        window.renderBudget = function() {
+            const container = document.getElementById('expense-items-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let totalTwd = 0;
+            let kanaPaidTwd = 0;
+            let lawsonPaidTwd = 0;
+
+            if (currentBudgetSubTab === 'pretrip') {
+                preTripExpenses.forEach((exp, idx) => {
+                    const twdVal = exp.twd || 0;
+                    totalTwd += twdVal;
+                    if (exp.payer === '香菜') kanaPaidTwd += twdVal;
+                    if (exp.payer === 'Lawson') lawsonPaidTwd += twdVal;
+
+                    const item = document.createElement('div');
+                    item.className = 'p-3.5 bg-paper rounded-2xl border border-borderline shadow-sm flex justify-between items-center text-sm animate-card-pop gap-2';
+                    item.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-stone-800 truncate">${exp.name}</div>
+                            <div class="text-xs text-stone-400 mt-0.5 truncate">預付者: <span class="font-bold text-stone-700">${exp.payer}</span> • ${exp.note || '事前開銷'}</div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <div class="text-right font-bold font-mono text-terracotta text-base">NT$ ${twdVal.toLocaleString()}</div>
+                            <button onclick="deletePreTripExpense(${idx})" class="click-anim text-stone-300 hover:text-rose-500 p-1 transition active:scale-90"><i class="fa-regular fa-trash-can text-sm"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                onTripExpenses.forEach((exp, idx) => {
+                    const twdVal = Math.round(exp.jpy * liveJpyToTwdRate);
+                    totalTwd += twdVal;
+                    if (exp.payer === '香菜') kanaPaidTwd += twdVal;
+                    if (exp.payer === 'Lawson') lawsonPaidTwd += twdVal;
+
+                    const item = document.createElement('div');
+                    item.className = 'p-3.5 bg-paper rounded-2xl border border-borderline shadow-sm flex justify-between items-center text-sm animate-card-pop gap-2';
+                    item.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-stone-800 truncate">${exp.name}</div>
+                            <div class="text-xs text-stone-400 mt-0.5 truncate">代墊人: <span class="font-bold text-stone-700">${exp.payer}</span> • <span class="${exp.status === '已付' ? 'text-emerald-600' : 'text-amber-600'} font-bold">${exp.status || '已付'}</span></div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <div class="text-right">
+                                <div class="font-bold font-mono text-stone-800 text-base">¥ ${exp.jpy.toLocaleString()}</div>
+                                <div class="text-xs text-stone-400 font-mono">≈ NT$ ${twdVal.toLocaleString()}</div>
+                            </div>
+                            <button onclick="deleteExpense(${idx})" class="click-anim text-stone-300 hover:text-rose-500 p-1 transition active:scale-90"><i class="fa-regular fa-trash-can text-sm"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            const totalEl = document.getElementById('budget-total-twd');
+            const kanaEl = document.getElementById('payer-kana-total');
+            const lawsonEl = document.getElementById('payer-lawson-total');
+            if (totalEl) totalEl.innerText = `NT$ ${totalTwd.toLocaleString()}`;
+            if (kanaEl) kanaEl.innerText = `NT$ ${kanaPaidTwd.toLocaleString()}`;
+            if (lawsonEl) lawsonEl.innerText = `NT$ ${lawsonPaidTwd.toLocaleString()}`;
+        };
+
+        window.switchBudgetSubTab = function(subTab) {
+            currentBudgetSubTab = subTab;
+            const btnPre = document.getElementById('btn-budget-pretrip');
+            const btnOn = document.getElementById('btn-budget-ontrip');
+            const sectionTitle = document.getElementById('budget-section-title');
+            const expAmountLabel = document.getElementById('exp-amount-label');
+
+            if (subTab === 'pretrip') {
+                if (btnPre) btnPre.className = "click-anim flex-1 py-2.5 rounded-xl font-bold transition bg-navy text-white shadow-xs";
+                if (btnOn) btnOn.className = "click-anim flex-1 py-2.5 rounded-xl font-bold text-stone-600 hover:text-stone-900 transition";
+                if (sectionTitle) sectionTitle.innerText = "事前預訂總額 (台幣)";
+                if (expAmountLabel) expAmountLabel.innerText = "金額 (台幣 TWD)";
+            } else {
+                if (btnOn) btnOn.className = "click-anim flex-1 py-2.5 rounded-xl font-bold transition bg-navy text-white shadow-xs";
+                if (btnPre) btnPre.className = "click-anim flex-1 py-2.5 rounded-xl font-bold text-stone-600 hover:text-stone-900 transition";
+                if (sectionTitle) sectionTitle.innerText = "旅途動態花費 (自動估算台幣)";
+                if (expAmountLabel) expAmountLabel.innerText = "金額 (日幣 JPY)";
+            }
+            renderBudget();
+        };
+
+        // 行程與日語字典資料
+        const speakDict = {
+            "成田空港": { cn: "成田機場", romaji: "Narita Kuukou" },
+            "新宿駅": { cn: "新宿車站", romaji: "Shinjuku Eki" },
+            "NEX特急": { cn: "NEX 成田特快列車", romaji: "Narita Express" },
+            "チェックイン": { cn: "辦理入住登記", romaji: "Check-in" },
+            "荷物預かり": { cn: "寄放行李", romaji: "Nimotsu Azukari" },
+            "免税手続き": { cn: "辦理退稅", romaji: "Mensei Tetsuduki" },
+            "領収書お願いします": { cn: "請給我收據", romaji: "Ryooshuusho Onegaishimasu" },
+            "AFURI拉麵": { cn: "AFURI 柚子鹽拉麵", romaji: "AFURI Ramen" },
+            "和牛盛り合わせ": { cn: "和牛燒肉拼盤", romaji: "Wagyu Moriawase" },
+            "厚切り牛タン": { cn: "厚切牛舌", romaji: "Atsugiri Gyutan" },
+            "生ビール": { cn: "生啤酒", romaji: "Nama Biiru" },
+            "茅乃舎だし": { cn: "茅乃舍高湯包", romaji: "Kayanoya Dashi" },
+            "すき焼き定食": { cn: "壽喜燒套餐", romaji: "Sukiyaki Teishoku" },
+            "黒毛和牛": { cn: "黑毛和牛", romaji: "Kuroge Wagyu" },
+            "チケット発券": { cn: "便利商店取票", romaji: "Ticket Hakken" },
+            "Kアリーナ横浜": { cn: "橫濱 K-Arena 體育館", romaji: "K-Arena Yokohama" },
+            "指輪作り": { cn: "DIY銀戒手作體驗", romaji: "Yubina Tsukuri" },
+            "生ドーナツ": { cn: "生甜甜圈", romaji: "Nama Donut" },
+            "ハンバーグステーキ": { cn: "手作石燒漢堡排", romaji: "Hamburg Steak" },
+            "ジャンボめろんぱん": { cn: "巨無霸菠蘿麵包", romaji: "Jumbo Melonpan" },
+            "立食い寿司": { cn: "立食握壽司", romaji: "Tachigui Sushi" },
+            "極厚切り牛タン定食": { cn: "極厚切檸檬炭燒牛舌套餐", romaji: "Gokuatugiri Gyutan Teishoku" },
+            "ディズニーランド": { cn: "東京迪士尼樂園", romaji: "Disneyland" },
+            "ドン・キホーテ": { cn: "唐吉訶德 24h", romaji: "Don Quijote" },
+            "GALA湯沢": { cn: "GALA 湯澤滑雪場", romaji: "GALA Yuzawa" },
+            "ぽんしゅ館": { cn: "越後湯澤清酒博物館", romaji: "Ponshukan" },
+            "居酒屋": { cn: "日式居酒屋", romaji: "Izakaya" }
+        };
+
+        const itineraryData = {
+            1: {
+                dayTag: "DAY 1 • 12/18 FRI",
+                title: "抵達東京 & 新宿與池袋燒肉夜 🥩",
+                hotel: "Hotel Amanek Shinjuku Kabukicho",
+                emoji: "✈️",
+                spotsCount: "4 個停留點",
+                weatherCity: "新宿",
+                mapQuery: "Hotel Amanek Shinjuku Kabukicho",
+                bgImg: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&fit=crop",
+                items: [
+                    { time: "12:55", category: "TRANSPORT", title: "抵達班機 (長榮 BR198)", sub: "08:50 桃園 ➔ 12:55 成田機場 (NRT T1)", code: "BR198 (去程)", gps: "NEX 3,250日幣 / Skyliner 2,720日幣", story: "【去程航班】搭乘長榮航空 BR198，08:50 從桃園機場起飛，12:55 降落成田機場。", pills: ["成田空港", "新宿駅", "NEX特急"], gmap: "https://www.google.com/maps/search/?api=1&query=Narita+Airport" },
+                    { time: "15:00", category: "HOTEL", title: "入住：Hotel Amanek Shinjuku Kabukicho", sub: "新宿歌舞伎町飯店 (含早餐)", code: "12/18 - 12/21 入住", gps: "Shinjuku City, Tokyo", story: "【住宿資訊】Hotel Amanek Shinjuku Kabukicho，辦理 Check-in 並寄放行李。", pills: ["チェックイン", "荷物預かり"], gmap: "https://www.google.com/maps/search/?api=1&query=Hotel+Amanek+Shinjuku+Kabukicho" },
+                    { time: "16:30", category: "SHOPPING", title: "新宿散策 🛍️ ＆ AFURI 拉麵", sub: "BEAMS / Alpen Tokyo / 迪士尼旗艦店", story: "【新宿逛街】超大 BEAMS、Alpen Tokyo 與迪士尼旗艦店，晚上享用 AFURI 柚子鹽拉麵。", pills: ["免税手続き", "領収書お願いします", "AFURI拉麵"], gmap: "https://www.google.com/maps/search/?api=1&query=BEAMS+JAPAN+Shinjuku" },
+                    { time: "20:30", category: "FOOD", title: "晚餐：焼肉あぶる (前男友燒肉)", sub: "池袋店 • 已成功預約 ✅ (預約編號 JMRANVULZ9)", code: "JMRANVULZ9 (香菜 10/20 tabelog)", story: "【前男友燒肉】10/20 於 Tabelog 預約成功！池袋高評價燒肉，必點和牛盛合與厚切牛舌。", pills: ["和牛盛り合わせ", "厚切り牛タン", "生ビール"], gmap: "https://www.google.com/maps/search/?api=1&query=Yakiniku+Aburu+Ikebukuro" }
+                ]
+            },
+            2: {
+                dayTag: "DAY 2 • 12/19 SAT", title: "銀座壽喜燒 & 橫濱優里演唱會 🎵", hotel: "Hotel Amanek Shinjuku Kabukicho",
+                emoji: "🎤", spotsCount: "4 個停留點", weatherCity: "銀座 / 橫濱", mapQuery: "K-Arena Yokohama",
+                bgImg: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=600&fit=crop",
+                items: [
+                    { time: "10:00", category: "SHOPPING", title: "銀座散策 ⭐️ 茅乃舍採購", sub: "茅乃舍湯包 (昆布、野菜)", story: "【銀座採購】購買茅乃舍湯包。", pills: ["茅乃舎だし"], gmap: "https://www.google.com/maps/search/?api=1&query=Kayanoya+Ginza" },
+                    { time: "12:00", category: "FOOD", title: "午餐：山笑ふ 壽喜燒 (銀座店)", sub: "已預約 ✅ (預約編號 M3F2YLKNDC)", code: "M3F2YLKNDC (香菜 11/4 tabelog)", story: "精緻個人黑毛和牛壽喜燒鍋物。", pills: ["すき焼き定食", "黒毛和牛"], gmap: "https://www.google.com/maps/search/?api=1&query=Yamawarau+Ginza" },
+                    { time: "14:00", category: "SIGHTSEEING", title: "東京車站 KITTE 最美聖誕樹 🎄", sub: "15:00 出發前往橫濱", story: "東京車站 KITTE 中庭全白聖誕樹拍照打卡。", pills: ["東京駅"], gmap: "https://www.google.com/maps/search/?api=1&query=KITTE+Marunouchi" },
+                    { time: "15:00", category: "SIGHTSEEING", title: "橫濱 K-Arena ＆ 優里演唱會 🎵", sub: "bills ☕️ / 17:00 入場 18:00 開始", code: "全家便利商店取票 🎫", story: "【優里演唱會】先至 Familymart 取票！17:00入場、18:00開演。", pills: ["チケット発券", "Kアリーナ横浜"], gmap: "https://www.google.com/maps/search/?api=1&query=K-Arena+Yokohama" }
+                ]
+            },
+            3: {
+                dayTag: "DAY 3 • 12/20 SUN", title: "明治神宮、表參道 & 澀谷日落 🌇", hotel: "Hotel Amanek Shinjuku Kabukicho",
+                emoji: "🌅", spotsCount: "4 個停留點", weatherCity: "原宿 / 澀谷", mapQuery: "SHIBUYA SKY",
+                bgImg: "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=600&fit=crop",
+                items: [
+                    { time: "09:00", category: "SIGHTSEEING", title: "明治神宮 ➔ 10:00 原宿 AFURI 🍜", sub: "晨間參拜與熱騰騰拉麵", story: "明治神宮漫步，品嚐 Afuri 柚子鹽拉麵。", pills: ["AFURI拉麵"], gmap: "https://www.google.com/maps/search/?api=1&query=Meiji+Jingu" },
+                    { time: "11:30", category: "SHOPPING", title: "表參道散策 ☕️ glänta 戒指 DIY 💍", sub: "niko and... / I'm donut 🍩", story: "glänta 手作銀戒與購買 I'm donut 生甜甜圈。", pills: ["指輪作り", "生ドーナツ"], gmap: "https://www.google.com/maps/search/?api=1&query=glanta+Omotesando" },
+                    { time: "16:00", category: "SIGHTSEEING", title: "SHIBUYA SKY 展望台 👀", sub: "必買日落時段票 🌇 (12/5 23:00 開搶)", code: "12/5 23:00 搶購 ‼️", story: "俯瞰澀谷絕美夕陽與夜景。", pills: ["展望台"], gmap: "https://www.google.com/maps/search/?api=1&query=SHIBUYA+SKY" },
+                    { time: "18:30", category: "FOOD", title: "晚餐：極味屋 (Kiwamiya) 漢堡排", sub: "澀谷 PARCO 店 🥩", story: "澀谷 PARCO B1 DIY 石燒和牛漢堡排。", pills: ["ハンバーグステーキ"], gmap: "https://www.google.com/maps/search/?api=1&query=Kiwamiya+Shibuya+Parco" }
+                ]
+            },
+            4: {
+                dayTag: "DAY 4 • 12/21 MON", title: "淺草雷門、晴空塔 & 秋葉原檸檬牛舌 🍋", hotel: "三井花園飯店上野 (Mitsui Garden Hotel Ueno)",
+                emoji: "🍣", spotsCount: "5 個停留點", weatherCity: "淺草 / 秋葉原", mapQuery: "Mitsui Garden Hotel Ueno",
+                bgImg: "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&fit=crop",
+                items: [
+                    { time: "08:00", category: "HOTEL", title: "新宿退房 ➔ 入住：三井花園飯店上野", sub: "三井花園飯店上野 (含早餐)", code: "12/21 - 12/24 入住", story: "【住宿資訊】三井花園飯店上野，新宿退房後移動至上野寄放行李。", pills: ["荷物預かり"], gmap: "https://www.google.com/maps/search/?api=1&query=Mitsui+Garden+Hotel+Ueno" },
+                    { time: "10:00", category: "SIGHTSEEING", title: "淺草雷門 ➔ 大菠蘿麵包 ➔ 晴空塔", sub: "12:00 晴空塔觀景 👀", story: "淺草雷門散策、吃巨無霸菠蘿麵包，接著前往晴空塔。", pills: ["ジャンボめろんぱん"], gmap: "https://www.google.com/maps/search/?api=1&query=Asakusa+Kagetsudo" },
+                    { time: "14:00", category: "FOOD", title: "午餐：根室花丸 (立食)", sub: "錦糸町店 🍣", story: "根室花丸立食壽司。", pills: ["立食い寿司"], gmap: "https://www.google.com/maps/search/?api=1&query=Nemuro+Hanamaru+Kinshicho" },
+                    { time: "16:00", category: "SHOPPING", title: "神保町 Jump Shop 📚", sub: "THE ジャンプショップ 神保町店", story: "神保町朝聖 JUMP SHOP 官方動漫周邊。", pills: [], gmap: "https://www.google.com/maps/search/?api=1&query=The+Jump+Shop+Jinbocho" },
+                    { time: "19:00", category: "FOOD", title: "晚餐：牛たんの檸檬 (牛舌の檸檬) 🍋", sub: "秋葉原店 • 已預約 ✅ (預約編號 J7T369C4GU)", code: "J7T369C4GU (政理 11/4 tabelog)", story: "極厚切炭燒檸檬牛舌套餐。", pills: ["極厚切り牛タン定食"], gmap: "https://www.google.com/maps/search/?api=1&query=Gyutan+no+Lemon+Akihabara" }
+                ]
+            },
+            5: {
+                dayTag: "DAY 5 • 12/22 TUE", title: "東京迪士尼樂園 👑🏰 & 唐吉訶德", hotel: "三井花園飯店上野 (Mitsui Garden Hotel Ueno)",
+                emoji: "👑", spotsCount: "2 個地點標示", weatherCity: "舞濱 / 迪士尼", mapQuery: "Tokyo Disneyland",
+                bgImg: "https://www.yourdisney.com.tw/wp-content/uploads/disneyland-castle-statue-01-1024x768.jpg",
+                items: [
+                    { time: "08:30", category: "SIGHTSEEING", title: "Tokyo Disneyland 迪士尼樂園 👑🏰", sub: "公主回家日 👑 王子初巡日 🤴 🎄", code: "全天迪士尼樂園", story: "迪士尼樂園全日遊！聖誕燈飾與城堡煙火秀。", pills: ["ディズニーランド"], gmap: "https://www.google.com/maps/search/?api=1&query=Tokyo+Disneyland" },
+                    { time: "21:30", category: "SHOPPING", title: "唐吉訶德 (Don Quijote) 採購宵夜", sub: "上野店 🛒", story: "回上野逛 24h 唐吉訶德採買伴手禮。", pills: ["ドン・キホーテ"], gmap: "https://www.google.com/maps/search/?api=1&query=Don+Quijote+Ueno" }
+                ]
+            },
+            6: {
+                dayTag: "DAY 6 • 12/23 WED", title: "越後湯澤雪景 ❄️ ＆ 六本木肉男 🏮", hotel: "三井花園飯店上野 (Mitsui Garden Hotel Ueno)",
+                emoji: "❄️", spotsCount: "3 個停留點", weatherCity: "越後湯澤 / 六本木", mapQuery: "Gala Yuzawa Station",
+                bgImg: "https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?w=600&fit=crop",
+                items: [
+                    { time: "09:00", category: "SIGHTSEEING", title: "越後湯澤 ❄️ GALA 纜車 ＆ 清酒博物館 🍶", sub: "沒下雪備案：鎌倉一日遊", story: "搭乘 GALA 湯澤纜車賞雪與逛清酒博物館。", pills: ["GALA湯沢", "ぽんしゅ館"], gmap: "https://www.google.com/maps/search/?api=1&query=Gala+Yuzawa+Station" },
+                    { time: "17:00", category: "SIGHTSEEING", title: "東京鐵塔 🗼 芝公園 & 六本木燈海 🎄", sub: "Keyakizaka 聖誕點燈", story: "芝公園遠眺東京鐵塔與六本木點燈。", pills: [], gmap: "https://www.google.com/maps/search/?api=1&query=Roppongi+Hills" },
+                    { time: "19:30", category: "FOOD", title: "晚餐居酒屋：肉男 (MEAT MAN 六本木) 🏮", sub: "現場排隊 🥩", code: "現場排隊候位", story: "MEAT MAN 居酒屋炭火串燒。", pills: ["居酒屋"], gmap: "https://www.google.com/maps/search/?api=1&query=MEAT+MAN+Roppongi" }
+                ]
+            },
+            7: {
+                dayTag: "DAY 7 • 12/24 THU", title: "回家了嗚嗚嗚 😭😭 返台", hotel: "平安返家", emoji: "🛫",
+                spotsCount: "1 個停留點", weatherCity: "成田機場", mapQuery: "Narita Airport Terminal 1",
+                bgImg: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&fit=crop",
+                items: [
+                    { time: "09:00", category: "TRANSPORT", title: "前往成田機場 ✈️ (長榮 BR183)", sub: "13:00 起飛 ➔ 16:05 抵達桃園", code: "BR183 (回程)", gps: "成田機場 Terminal 1", story: "【回程航班】搭乘長榮航空 BR183，13:00 從成田機場第一航廈起飛，16:05 平安降落桃園機場。", pills: ["成田空港", "免税手続き"], gmap: "https://www.google.com/maps/search/?api=1&query=Narita+Airport+Terminal+1" }
+                ]
+            }
+        };
+
+        window.unlockAndJoinSyncRoom = function() {
+            const inputEl = document.getElementById('lock-passcode-input');
+            const errEl = document.getElementById('lock-error-msg');
+            const cleanCode = inputEl ? inputEl.value.trim() : '';
+
+            if (cleanCode !== "TOKYO2026FOR6YEARS") {
+                if (errEl) errEl.classList.remove('hidden');
+                return;
+            }
+
+            if (errEl) errEl.classList.add('hidden');
+            const lockScreen = document.getElementById('lockScreenOverlay');
+            if (lockScreen) {
+                lockScreen.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => lockScreen.style.display = 'none', 500);
+            }
+            localStorage.setItem('tokyo_room_code', cleanCode);
+        };
+
+        window.openModal = function(modalId) { document.getElementById(modalId)?.classList.remove('hidden'); };
+        window.closeModal = function(modalId) { document.getElementById(modalId)?.classList.add('hidden'); };
+
+        window.selectDate = function(dayNum) {
+            document.querySelectorAll('.date-btn').forEach((btn, idx) => {
+                if (idx + 1 === dayNum) {
+                    btn.className = 'click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-navy text-white shadow-sm transition active:scale-95 animate-card-pop';
+                    btn.querySelector('span:first-child').className = 'text-[10px] uppercase tracking-wider opacity-80 font-bold';
+                } else {
+                    btn.className = 'click-anim date-btn flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl bg-paper text-charcoal border border-borderline transition active:scale-95';
+                    btn.querySelector('span:first-child').className = 'text-[10px] uppercase tracking-wider text-stone-400 font-bold';
+                }
+            });
+
+            const dayData = itineraryData[dayNum];
+            if (!dayData) return;
+
+            document.getElementById('current-day-tag').innerText = dayData.dayTag;
+            document.getElementById('current-location-title').innerText = dayData.title;
+            document.getElementById('current-hotel-sub').innerText = `入住：${dayData.hotel}`;
+            document.getElementById('current-day-emoji').innerText = dayData.emoji;
+            document.getElementById('current-day-bg-img').src = dayData.bgImg;
+            document.getElementById('weather-city-name').innerText = `${dayData.weatherCity} 即時天氣`;
+            document.getElementById('hotel-name').innerText = dayData.hotel;
+            document.getElementById('map-spots-count').innerText = dayData.spotsCount;
+            document.getElementById('hotel-map-link').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dayData.hotel)}`;
+
+            const iframeEl = document.getElementById('google-map-iframe');
+            if (iframeEl) {
+                iframeEl.src = `https://maps.google.com/maps?q=${encodeURIComponent(dayData.mapQuery)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+            }
+
+            const tagsContainer = document.getElementById('day-spots-list-tags');
+            if (tagsContainer && dayData.items) {
+                tagsContainer.innerHTML = dayData.items.map(item => `
+                    <a href="${item.gmap}" target="_blank" class="click-anim inline-flex items-center gap-1.5 text-xs bg-navy-light text-navy hover:bg-navy hover:text-white font-bold px-3 py-1.5 rounded-xl border border-navy/15 transition active:scale-95 animate-card-pop">
+                        <i class="fa-solid fa-location-dot text-terracotta"></i> ${item.title.split(' ')[0]} 📍
+                    </a>
+                `).join('');
+            }
+
+            const itemsContainer = document.getElementById('day-items-container');
+            itemsContainer.innerHTML = '';
+            dayData.items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-paper rounded-2xl p-4 border border-borderline shadow-sm space-y-2 hover:border-navy/40 transition animate-card-pop';
+
+                let catBadgeColor = 'bg-stone-100 text-stone-600';
+                if (item.category === 'FOOD') catBadgeColor = 'bg-amber-100 text-amber-800';
+                if (item.category === 'SHOPPING') catBadgeColor = 'bg-rose-100 text-rose-800';
+                if (item.category === 'HOTEL') catBadgeColor = 'bg-blue-100 text-blue-800';
+                if (item.category === 'TRANSPORT') catBadgeColor = 'bg-emerald-100 text-emerald-800';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start cursor-pointer gap-2" onclick="openDetailModal(${dayNum}, ${index})">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-mono font-bold text-sm text-terracotta flex-shrink-0">${item.time}</span>
+                            <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${catBadgeColor} flex-shrink-0">${item.category}</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-stone-300 text-sm flex-shrink-0"></i>
+                    </div>
+                    <div class="cursor-pointer min-w-0" onclick="openDetailModal(${dayNum}, ${index})">
+                        <h4 class="font-bold text-base text-stone-800 truncate">${item.title}</h4>
+                        <p class="text-xs text-stone-500 mt-0.5 truncate">${item.sub}</p>
+                    </div>
+                    ${item.pills && item.pills.length > 0 ? `
+                        <div class="flex flex-wrap gap-1.5 pt-1">
+                            ${item.pills.map(p => `<span class="text-xs bg-porcelain text-stone-700 px-2.5 py-0.5 rounded-md border border-stone-200/60 truncate max-w-[150px]" onclick="event.stopPropagation(); openSpeakModal('${p}')">💬 ${p}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                        <span class="text-xs text-stone-400 font-bold truncate">📌 當日地點標籤</span>
+                        <a href="${item.gmap}" target="_blank" onclick="event.stopPropagation();" class="click-anim inline-flex items-center gap-1.5 text-xs font-bold bg-navy text-white px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition flex-shrink-0">
+                            <i class="fa-solid fa-location-dot text-terracotta"></i> 📍 Google Maps 導航
+                        </a>
+                    </div>
+                `;
+                itemsContainer.appendChild(card);
+            });
+        };
+
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('text-navy');
+                el.classList.add('text-stone-400');
+            });
+
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if (targetTab) targetTab.classList.add('active');
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.remove('text-stone-400');
+                activeNav.classList.add('text-navy');
+            }
+
+            const dateSelectorWrapper = document.getElementById('date-selector-wrapper');
+            if (dateSelectorWrapper) {
+                if (tabId === 'itinerary') {
+                    dateSelectorWrapper.classList.remove('hidden');
+                } else {
+                    dateSelectorWrapper.classList.add('hidden');
+                }
+            }
+            localStorage.setItem('tokyo_active_tab', tabId);
+        };
+
+        window.openDetailModal = function(dayNum, itemIdx) {
+            const item = itineraryData[dayNum].items[itemIdx];
+            if (!item) return;
+            document.getElementById('modal-category').innerText = item.category;
+            document.getElementById('modal-title').innerText = item.title;
+            document.getElementById('modal-subtitle').innerText = item.sub;
+            document.getElementById('modal-story-text').innerHTML = item.story;
+            document.getElementById('modal-gmap-btn').href = item.gmap;
+
+            const codeBox = document.getElementById('modal-code-box');
+            if (item.code) {
+                codeBox.classList.remove('hidden');
+                document.getElementById('modal-code-val').innerText = item.code;
+                document.getElementById('modal-gps-val').innerText = item.gps || '準備就緒';
+            } else {
+                codeBox.classList.add('hidden');
+            }
+
+            const pillsContainer = document.getElementById('pills-container');
+            const speakPillsBox = document.getElementById('modal-speak-pills');
+            pillsContainer.innerHTML = '';
+            if (item.pills && item.pills.length > 0) {
+                speakPillsBox.classList.remove('hidden');
+                item.pills.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = 'click-anim text-sm bg-navy-light text-navy font-bold px-3 py-1.5 rounded-xl border border-navy/20 active:scale-95 transition flex items-center gap-1';
+                    btn.innerText = `💬 ${p}`;
+                    btn.onclick = () => openSpeakModal(p);
+                    pillsContainer.appendChild(btn);
+                });
+            } else {
+                speakPillsBox.classList.add('hidden');
+            }
+            openModal('itemDetailModal');
+        };
+
+        window.openSpeakModal = function(japaneseText) {
+            const info = speakDict[japaneseText] || { cn: "請指給店員看", romaji: "" };
+            document.getElementById('speak-main-text').innerText = japaneseText;
+            document.getElementById('speak-cn-text').innerText = info.cn;
+            document.getElementById('speak-romaji-text').innerText = info.romaji ? `讀音: ${info.romaji}` : '';
+            openModal('speakCardModal');
+        };
+
+        window.speakText = function() {
+            const text = document.getElementById('speak-main-text').innerText;
+            if (!text) return;
+            const googleTTSUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ja&client=tw-ob`;
+            const audio = new Audio(googleTTSUrl);
+            audio.play().catch(e => {
+                console.error("Google TTS Play Error:", e);
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'ja-JP';
+                    window.speechSynthesis.speak(utterance);
+                }
+            });
+        };
+
+        async function fetchLiveWeather() {
+            const statusEl = document.getElementById('weather-api-status');
+            const weatherContainer = document.getElementById('hourly-weather-container');
+            try {
+                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6812&longitude=139.7671&current_weather=true&hourly=temperature_2m,relativehumidity_2m,weathercode&timezone=Asia%2FTokyo');
+                const data = await response.json();
+                if (data && data.hourly) {
+                    if (statusEl) {
+                        statusEl.innerText = "已連線即時氣象";
+                        statusEl.className = "text-xs text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-md font-bold";
+                    }
+                    if (data.current_weather) {
+                        const curTemp = Math.round(data.current_weather.temperature);
+                        const curWind = data.current_weather.windspeed;
+                        document.getElementById('info-weather-temp').innerText = `${curTemp}°C`;
+                        document.getElementById('info-weather-wind').innerText = `${curWind} km/h`;
+                        if (data.hourly.relativehumidity_2m && data.hourly.relativehumidity_2m.length > 0) {
+                            document.getElementById('info-weather-humidity').innerText = `${data.hourly.relativehumidity_2m[0]}%`;
+                        }
+                    }
+                    if (weatherContainer) {
+                        weatherContainer.innerHTML = '';
+                        for (let i = 0; i < 24; i++) {
+                            const timeStr = data.hourly.time[i].split('T')[1].substring(0, 5);
+                            const temp = Math.round(data.hourly.temperature_2m[i]);
+                            const code = data.hourly.weathercode[i];
+                            let icon = 'fa-sun';
+                            if (code >= 1 && code <= 3) icon = 'fa-cloud-sun';
+                            if (code >= 45 && code <= 48) icon = 'fa-smog';
+                            if (code >= 51 && code <= 67) icon = 'fa-cloud-rain';
+                            if (code >= 71) icon = 'fa-snowflake';
+
+                            const item = document.createElement('div');
+                            item.className = 'flex flex-col items-center flex-shrink-0 text-center min-w-[48px]';
+                            item.innerHTML = `<span class="text-xs text-stone-400 font-mono">${timeStr}</span><i class="fa-solid ${icon} text-amber-500 text-sm my-1"></i><span class="text-xs font-bold text-stone-800">${temp}°</span>`;
+                            weatherContainer.appendChild(item);
+                        }
+                    }
+                }
+            } catch (err) {
+                if (statusEl) statusEl.innerText = "離線氣象模式";
+            }
+        }
+
+        async function fetchLiveExchangeRate() {
+            const indicator = document.getElementById('live-rate-indicator');
+            try {
+                const response = await fetch('https://open.er-api.com/v6/latest/JPY');
+                const data = await response.json();
+                if (data && data.rates && data.rates.TWD) {
+                    liveJpyToTwdRate = data.rates.TWD;
+                    if (indicator) indicator.innerText = `即時匯率: 1 JPY ≈ ${liveJpyToTwdRate.toFixed(3)} TWD`;
+                    renderBudget();
+                }
+            } catch (e) {
+                if (indicator) indicator.innerText = `匯率: 1 JPY ≈ ${liveJpyToTwdRate} TWD`;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const savedCode = localStorage.getItem('tokyo_room_code');
+            if (savedCode === "TOKYO2026FOR6YEARS") {
+                const lockScreen = document.getElementById('lockScreenOverlay');
+                if (lockScreen) {
+                    lockScreen.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => lockScreen.style.display = 'none', 500);
+                }
+            }
+            
+            const savedTab = localStorage.getItem('tokyo_active_tab') || 'itinerary';
+            switchTab(savedTab);
+
+            selectDate(1);
+            fetchLiveWeather();
+            fetchLiveExchangeRate();
+        });
+    </script>
+</body>
+</html>
